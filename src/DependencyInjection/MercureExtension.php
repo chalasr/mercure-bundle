@@ -25,6 +25,7 @@ use Symfony\Component\Mercure\Debug\TraceablePublisher;
 use Symfony\Component\Mercure\Jwt\StaticJwtProvider;
 use Symfony\Component\Mercure\Publisher;
 use Symfony\Component\Mercure\PublisherInterface;
+use Symfony\Component\Mercure\Messenger\UpdateHandler;
 use Symfony\Component\Stopwatch\Stopwatch;
 
 /**
@@ -75,9 +76,14 @@ final class MercureExtension extends Extension
             $bus = $hub['bus'] ?? null;
             $attributes = null === $bus ? [] : ['bus' => $hub['bus']];
 
-            $publisherDefinition
-                ->addTag('messenger.message_handler', $attributes)
-                ->addTag('mercure.publisher');
+            $publisherDefinition->addTag('mercure.publisher');
+
+            if (class_exists(UpdateHandler::class)) {
+                $container->register('mercure.message_handler.update', UpdateHandler::class)
+                    ->addArgument(new Reference($hubId));
+            } else {
+                $publisherDefinition->addTag('messenger.message_handler', $attributes);
+            }
 
             if ($enableProfiler) {
                 $container->register("$hubId.traceable", TraceablePublisher::class)
